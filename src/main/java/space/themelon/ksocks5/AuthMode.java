@@ -6,6 +6,9 @@ public class AuthMode {
 
   private static final byte USERNAME_PASSWORD_VERSION = 0x01;
 
+  private static final byte[] USER_PASS_OKAY = new byte[] {USERNAME_PASSWORD_VERSION, 0x00};
+  private static final byte[] USER_PASS_NOT_OKAY = new byte[] {USERNAME_PASSWORD_VERSION, 0x01};
+
   public interface ValidationCallback {
     void success() throws IOException;
     void failed() throws IOException;
@@ -46,7 +49,7 @@ public class AuthMode {
     }
     int version = socks5.read();
     if (version != USERNAME_PASSWORD_VERSION) {
-      throw new Socks5Exception("Unknown Username Password Version");
+      throw new Socks5Exception("Unknown Username Password Version " + version);
     }
     byte[] username = socks5.readString();
     byte[] password = socks5.readString();
@@ -54,14 +57,12 @@ public class AuthMode {
     validation.validate(new String(username), new String(password), new ValidationCallback() {
       @Override
       public void success() throws IOException {
-        socks5.write((byte) 0x01);
-        socks5.write((byte) 0x00);
+        socks5.writeArray(USER_PASS_OKAY);
       }
 
       @Override
       public void failed() throws IOException {
-        socks5.write(USERNAME_PASSWORD_VERSION);
-        socks5.write((byte) 0x01);
+        socks5.writeArray(USER_PASS_NOT_OKAY);
         socks5.close();
       }
     });

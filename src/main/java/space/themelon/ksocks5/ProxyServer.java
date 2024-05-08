@@ -3,6 +3,7 @@ package space.themelon.ksocks5;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ProxyServer {
@@ -18,6 +19,12 @@ public class ProxyServer {
   public ProxyServer(int port, AuthMode... authModes) throws IOException {
     server = new ServerSocket(port);
     new Thread(() -> {
+      try {
+        server.setReceiveBufferSize(100);
+        server.setPerformancePreferences(0, 1, 2);
+      } catch (SocketException e) {
+        throw new RuntimeException(e);
+      }
       while (running.get()) {
         try {
           acceptConnections(authModes);

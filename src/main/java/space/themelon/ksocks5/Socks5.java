@@ -44,6 +44,8 @@ public class Socks5 {
   }
 
   public Socks5(Socket client, AuthMode... authModes) throws IOException {
+    client.setReceiveBufferSize(100);
+
     this.client = client;
     this.authModes = authModes;
 
@@ -126,7 +128,7 @@ public class Socks5 {
         ServerSocket server = new ServerSocket();
         server.bind(new InetSocketAddress(hostname, bindPort));
 
-        byte[] bindPortBytes = new byte[] {
+        byte[] bindPortBytes = new byte[]{
             (byte) (bindPort >> 8), (byte) (bindPort)
         };
         writeAddress(addrType, InetAddress.getByName(hostname).getAddress(), bindPortBytes);
@@ -169,8 +171,9 @@ public class Socks5 {
   }
 
   private void matchVersion() throws IOException {
-    if (read() != SOCKS_VERSION) {
-      throw new Socks5Exception("Expected Socks 5 Version");
+    int version = read();
+    if (version != SOCKS_VERSION) {
+      throw new Socks5Exception("Expected Socks 5 Version, got " + version);
     }
   }
 
@@ -189,10 +192,8 @@ public class Socks5 {
     return string;
   }
 
-  private void writeArray(byte[] bytes) throws IOException {
-    for (byte b : bytes) {
-      write(b);
-    }
+  void writeArray(byte[] bytes) throws IOException {
+    output.write(bytes);
   }
 
   void write(byte b) throws IOException {
