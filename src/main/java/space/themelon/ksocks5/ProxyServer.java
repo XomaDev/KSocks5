@@ -12,11 +12,15 @@ public class ProxyServer {
   private final ServerSocket server;
 
   public ProxyServer(int port) throws IOException {
+    this(port, AuthMode.NO_AUTH);
+  }
+
+  public ProxyServer(int port, AuthMode... authModes) throws IOException {
     server = new ServerSocket(port);
     new Thread(() -> {
       while (running.get()) {
         try {
-          acceptConnections();
+          acceptConnections(authModes);
         } catch (IOException e) {
           running.set(false);
           break;
@@ -30,13 +34,13 @@ public class ProxyServer {
     server.close();
   }
 
-  private void acceptConnections() throws IOException {
+  private void acceptConnections(AuthMode[] authModes) throws IOException {
     Socket client = server.accept();
     new Thread(() -> {
       try {
-        new Socks5(client);
-      } catch (IOException ignored) {
-
+        new Socks5(client, authModes);
+      } catch (IOException e) {
+        e.printStackTrace();
       }
     }).start();
   }

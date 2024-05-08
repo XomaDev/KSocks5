@@ -15,15 +15,13 @@ public class Socks5 {
 
   private static final byte SOCKS_VERSION = 0x05;
 
-  private static final byte NO_AUTH = 0x00;
-
   private static final byte ADDR_IPV4 = 0x01;
   private static final byte ADDR_DOMAIN = 0x03;
   private static final byte ADDR_IPV6 = 0x04;
 
   private static final byte CMD_STREAM = 0x01;
   private static final byte CMD_BIND = 0x02;
-  private static final byte CMD_ASSOCIATE_UDP = 0x03;
+//  private static final byte CMD_ASSOCIATE_UDP = 0x03; (Not Implemented)
 
   private static final byte STATUS_GRANTED = 0x00;
   private static final byte STATUS_FAILURE = 0x01;
@@ -39,27 +37,42 @@ public class Socks5 {
   private final InputStream input;
   private final OutputStream output;
 
+  private final AuthMode[] authModes;
+
   public Socks5(Socket client) throws IOException {
+    this(client, AuthMode.NO_AUTH);
+  }
+
+  public Socks5(Socket client, AuthMode... authModes) throws IOException {
     this.client = client;
+    this.authModes = authModes;
 
     input = client.getInputStream();
     output = client.getOutputStream();
 
-    acceptGreet();
-    serveProxy();
+    if (acceptGreet()) {
+      serveProxy();
+    }
   }
 
-  private void acceptGreet() throws IOException {
+  private boolean acceptGreet() throws IOException {
     matchVersion();
     int nAuth = read();
     byte[] auths = readArray(nAuth);
-    for (byte auth : auths) {
-      if (auth == NO_AUTH) {
-        write(SOCKS_VERSION);
-        write(auth);
-        break;
+    for (AuthMode mode : authModes) {
+      for (byte auth : auths) {
+        if (auth == mode.type.b) {
+          write(SOCKS_VERSION);
+          write(auth);
+          mode.handle(this);
+          return true;
+        }
       }
     }
+    write(SOCKS_VERSION);
+    write((byte) 0xFF);
+    close();
+    return false;
   }
 
   private void serveProxy() throws IOException {
@@ -107,7 +120,6 @@ public class Socks5 {
         break;
       }
       case CMD_BIND: {
-        System.out.println("Received bind request");
         String hostname = address.getHostAddress();
         int bindPort = port == 0 ? SocketUtils.INSTANCE.findAvailableTcpPort() : port;
 
@@ -168,7 +180,7 @@ public class Socks5 {
     }
   }
 
-  private byte[] readString() throws IOException {
+  byte[] readString() throws IOException {
     int length = read();
     byte[] string = new byte[length];
     for (int i = 0; i < length; i++) {
@@ -183,7 +195,7 @@ public class Socks5 {
     }
   }
 
-  private void write(byte b) throws IOException {
+  void write(byte b) throws IOException {
     output.write(b);
   }
 
@@ -195,7 +207,11 @@ public class Socks5 {
     return bytes;
   }
 
-  private int read() throws IOException {
+  int read() throws IOException {
     return input.read();
+  }
+
+  public void close() throws IOException {
+    client.close();
   }
 }

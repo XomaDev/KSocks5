@@ -10,11 +10,8 @@ import java.net.URL;
 public class SimpleProxy {
   public static void main(String[] args) throws IOException {
     int port = 1234;
-    ProxyServer server = new ProxyServer(port);
 
-    if (true) {
-      return;
-    }
+    ProxyServer server = new ProxyServer(port);
 
     Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("localhost", port));
     HttpURLConnection connection = (HttpURLConnection) new URL("https://api.ipify.org").openConnection(proxy);
@@ -30,6 +27,5 @@ public class SimpleProxy {
     }
     input.close();
     server.close();
-    System.exit(0);
   }
 }
