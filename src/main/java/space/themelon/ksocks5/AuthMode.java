@@ -10,7 +10,7 @@ public class AuthMode {
   private static final byte[] USER_PASS_NOT_OKAY = new byte[] {USERNAME_PASSWORD_VERSION, 0x01};
 
   public interface UsernamePasswordValidation {
-    boolean validate(String username, String password) throws IOException;
+    boolean validate(String username, String password);
   }
 
   public static final AuthMode[] NO_AUTH = { new AuthMode(AuthType.NO_AUTH) };
@@ -51,9 +51,7 @@ public class AuthMode {
 
     if (validation.validate(new String(username), new String(password))) {
       socks5.writeArray(USER_PASS_OKAY);
-      System.out.println("yep okay");
     } else {
-      System.out.println("NOT OKAY_--------");
       socks5.writeArray(USER_PASS_NOT_OKAY);
       socks5.close();
     }

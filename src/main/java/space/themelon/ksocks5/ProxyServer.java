@@ -14,14 +14,28 @@ public class ProxyServer {
 
   public static class Builder {
 
+    private final String hostname;
     private final int port;
+
+    private boolean reverseProxy = false;
+
     private AuthMode[] auth = AuthMode.NO_AUTH;
     
-    private ClientCallback clientMonitor;
-    private ConnectionCallback connectionMonitor;
+    private ClientCallback clientCallback;
+    private ConnectionCallback connectionCallback;
 
     public Builder(int port) {
+      this("localhost", port);
+    }
+
+    public Builder(String hostname, int port) {
+      this.hostname = hostname;
       this.port = port;
+    }
+
+    public Builder reverseProxy() {
+      reverseProxy = true;
+      return this;
     }
 
     public Builder auth(AuthMode... auth) {
@@ -30,51 +44,68 @@ public class ProxyServer {
     }
     
     public Builder clientMonitor(ClientCallback callback) {
-      this.clientMonitor = callback;
+      this.clientCallback = callback;
       return this;
     }
 
     public Builder connectionMonitor(ConnectionCallback callback) {
-      this.connectionMonitor = callback;
+      this.connectionCallback = callback;
       return this;
     }
 
     public ProxyServer build() throws IOException {
-      return new ProxyServer(port, auth, clientMonitor, connectionMonitor);
+      return new ProxyServer(hostname, port, reverseProxy, auth, clientCallback, connectionCallback);
     }
   }
 
   private final ServerSocket server;
   private final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
 
+  private final AuthMode[] auth;
+
+  private final ClientCallback clientCallback;
   private final ConnectionCallback connectionCallback;
 
   private ProxyServer(
-      int port, AuthMode[] auth, ClientCallback clientMonitor,
-      ConnectionCallback connectionMonitor
+      String hostname,
+      int port,
+      boolean reverseProxy,
+      AuthMode[] auth,
+      ClientCallback clientCallback,
+      ConnectionCallback connectionCallback
   ) throws IOException {
-    this.connectionCallback = connectionMonitor;
+    this.auth = auth;
 
-    server = new ServerSocket(port);
-    server.setReceiveBufferSize(100);
-    server.setPerformancePreferences(0, 1, 2);
+    this.clientCallback = clientCallback;
+    this.connectionCallback = connectionCallback;
+
+    if (reverseProxy) {
+      server = null;
+    } else {
+      server = new ServerSocket(port);
+      server.setReceiveBufferSize(100);
+      server.setPerformancePreferences(0, 1, 2);
+    }
 
     service.execute(() -> {
       for (;;) {
         try {
-          Socket client = server.accept();
-          if (clientMonitor != null && !clientMonitor.newClient(client.getInetAddress())) {
-            System.out.println("rejected " + client.getInetAddress());
-            client.close();
-            return;
-          }
-          initSocks5(auth, client);
+          Socket client = reverseProxy ? new Socket(hostname, port) : server.accept();
+          initSocket(client);
         } catch (IOException e) {
           close();
           break;
         }
       }
     });
+  }
+
+  private void initSocket(Socket client) {
+    if (clientCallback != null && !clientCallback.newClient(client.getInetAddress())) {
+      closeSafely(client);
+      return;
+    }
+    initSocks5(auth, client);
   }
 
   private void initSocks5(AuthMode[] auth, Socket client) {
@@ -93,10 +124,12 @@ public class ProxyServer {
   }
 
   private static void closeSafely(Closeable closeable) {
-    try {
-      closeable.close();
-    } catch (IOException ignored) {
+    if (closeable != null) {
+      try {
+        closeable.close();
+      } catch (IOException ignored) {
 
+      }
     }
   }
 }

@@ -1,33 +1,28 @@
 package space.themelon.ksocks5;
 
-import space.themelon.ksocks5.interfaces.ClientCallback;
-import space.themelon.ksocks5.interfaces.ConnectionCallback;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.ServerSocket;
 import java.net.Socket;
 
-public class PasswordProxy {
+public class ReverseProxy {
   public static void main(String[] args) throws IOException {
-    int port = 12346;
-
-    AuthMode userPassAuth = new AuthMode((username, password) -> username.equals("meow") && password.equals("world"));
-    ClientCallback clientCallback = address -> {
-      System.out.println("Address: " + address);
+    int port = 1732;
+    AuthMode login = new AuthMode((username, password) -> {
+      if (username.equals("melon") || username.equals("orange")) {
+        return password.equals("fruit");
+      }
       return true;
-    };
-    ConnectionCallback connectionCallback = (from, address, port1) -> {
-      System.out.println("Connecting to " + address + " port " + port1);
-      return true;
-    };
-    ProxyServer proxy = new ProxyServer.Builder(port)
-        .auth(userPassAuth)
-        .clientMonitor(clientCallback)
-        .connectionMonitor(connectionCallback)
+    });
+    ProxyServer server = new ProxyServer.Builder("localhost", port)
+        .auth(login)
+        .reverseProxy()
         .build();
 
-    Socket socket = new Socket("localhost", port);
+    ServerSocket reverseClient = new ServerSocket(port);
+    Socket socket = reverseClient.accept();
+    reverseClient.close();
 
     InputStream input = socket.getInputStream();
     OutputStream output = socket.getOutputStream();
@@ -52,7 +47,7 @@ public class PasswordProxy {
       System.out.println("Username Password Authentication Successful");
     }
     socket.close();
-    proxy.close();
+    server.close();
     System.exit(0);
   }
 }
