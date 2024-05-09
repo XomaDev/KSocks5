@@ -8,7 +8,7 @@ import java.net.Socket;
 
 public class SimpleBind {
   public static void main(String[] args) throws IOException {
-    ProxyServer proxy = new ProxyServer(12345);
+    ProxyServer proxy = new ProxyServer.Builder(12345).build();
 
     Socket socket = new Socket("localhost", 12345);
 

@@ -11,7 +11,7 @@ public class SimpleProxy {
   public static void main(String[] args) throws IOException {
     int port = 1234;
 
-    ProxyServer server = new ProxyServer(port);
+    ProxyServer server = new ProxyServer.Builder(port).build();
 
     Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("localhost", port));
     HttpURLConnection connection = (HttpURLConnection) new URL("https://api.ipify.org").openConnection(proxy);

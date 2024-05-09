@@ -1,21 +1,35 @@
 package space.themelon.ksocks5;
 
+import space.themelon.ksocks5.interfaces.ClientCallback;
+import space.themelon.ksocks5.interfaces.ConnectionCallback;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.*;
+import java.net.Socket;
 
 public class PasswordProxy {
   public static void main(String[] args) throws IOException {
-    int port = 12345;
+    int port = 12346;
 
-    ProxyServer proxy = new ProxyServer(port, new AuthMode((username, password, callback) -> {
-      if (username.equals("meow") && password.equals("world")) {
-        callback.success();
-      } else {
-        callback.failed();
-      }
-    }));
+    AuthMode userPassAuth = new AuthMode((username, password) -> username.equals("meow") && password.equals("world"));
+    ClientCallback clientCallback = address -> {
+      System.out.println("Address: " + address);
+      return true;
+    };
+    ConnectionCallback connectionCallback = (from, address, port1) -> {
+      System.out.println("Connecting to " + address + " port " + port1);
+      return true;
+    };
+    ProxyServer proxy = new ProxyServer.Builder(port)
+        .auth(userPassAuth)
+        .clientMonitor(clientCallback)
+        .connectionMonitor(connectionCallback)
+        .build();
+
+    if (true) {
+      return;
+    }
 
     Socket socket = new Socket("localhost", port);
 

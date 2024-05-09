@@ -9,13 +9,8 @@ public class AuthMode {
   private static final byte[] USER_PASS_OKAY = new byte[] {USERNAME_PASSWORD_VERSION, 0x00};
   private static final byte[] USER_PASS_NOT_OKAY = new byte[] {USERNAME_PASSWORD_VERSION, 0x01};
 
-  public interface ValidationCallback {
-    void success() throws IOException;
-    void failed() throws IOException;
-  }
-
   public interface UsernamePasswordValidation {
-    void validate(String username, String password, ValidationCallback callback) throws IOException;
+    boolean validate(String username, String password) throws IOException;
   }
 
   public static final AuthMode[] NO_AUTH = { new AuthMode(AuthType.NO_AUTH) };
@@ -54,18 +49,14 @@ public class AuthMode {
     byte[] username = socks5.readString();
     byte[] password = socks5.readString();
 
-    validation.validate(new String(username), new String(password), new ValidationCallback() {
-      @Override
-      public void success() throws IOException {
-        socks5.writeArray(USER_PASS_OKAY);
-      }
-
-      @Override
-      public void failed() throws IOException {
-        socks5.writeArray(USER_PASS_NOT_OKAY);
-        socks5.close();
-      }
-    });
+    if (validation.validate(new String(username), new String(password))) {
+      socks5.writeArray(USER_PASS_OKAY);
+      System.out.println("yep okay");
+    } else {
+      System.out.println("NOT OKAY_--------");
+      socks5.writeArray(USER_PASS_NOT_OKAY);
+      socks5.close();
+    }
   }
 
   @Override

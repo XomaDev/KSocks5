@@ -1,5 +1,7 @@
 package space.themelon.ksocks5;
 
+import space.themelon.ksocks5.interfaces.ConnectionCallback;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,7 +23,7 @@ public class Socks5 {
 
   private static final byte CMD_STREAM = 0x01;
   private static final byte CMD_BIND = 0x02;
-//  private static final byte CMD_ASSOCIATE_UDP = 0x03; (Not Implemented)
+  // private static final byte CMD_ASSOCIATE_UDP = 0x03; (Not Implemented)
 
   private static final byte STATUS_GRANTED = 0x00;
   private static final byte STATUS_FAILURE = 0x01;
@@ -34,20 +36,22 @@ public class Socks5 {
   private static final byte STATUS_ADDRESS_UNSUPPORTED = 0X08;
 
   private final Socket client;
+  private final InetAddress clientAddress;
+
   private final InputStream input;
   private final OutputStream output;
 
+  private final ConnectionCallback callback;
   private final AuthMode[] authModes;
 
-  public Socks5(Socket client) throws IOException {
-    this(client, AuthMode.NO_AUTH);
-  }
-
-  public Socks5(Socket client, AuthMode... authModes) throws IOException {
+  public Socks5(Socket client, ConnectionCallback callback, AuthMode... authModes) throws IOException {
     client.setReceiveBufferSize(100);
 
     this.client = client;
+    this.callback = callback;
     this.authModes = authModes;
+
+    clientAddress = client.getInetAddress();
 
     input = client.getInputStream();
     output = client.getOutputStream();
@@ -109,6 +113,13 @@ public class Socks5 {
     }
 
     int port = (portBytes[0] & 0xff) << 8 | portBytes[1] & 0xff;
+
+    if (callback != null && !callback.newConnection(clientAddress, address, port)) {
+      System.out.println("rejected");
+      write(STATUS_NOT_ALLOWED);
+      writeAddress(addrType, rawAddress, portBytes);
+      return;
+    }
 
     switch (command) {
       case CMD_STREAM: {
