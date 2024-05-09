@@ -64,15 +64,13 @@ public class Socks5 {
     for (AuthMode mode : authModes) {
       for (byte auth : auths) {
         if (auth == mode.type.b) {
-          write(SOCKS_VERSION);
-          write(auth);
+          writeArray(SOCKS_VERSION, auth);
           mode.handle(this);
           return true;
         }
       }
     }
-    write(SOCKS_VERSION);
-    write((byte) 0xFF);
+    writeArray(SOCKS_VERSION, (byte) 0xFF);
     close();
     return false;
   }
@@ -131,6 +129,7 @@ public class Socks5 {
         byte[] bindPortBytes = new byte[]{
             (byte) (bindPort >> 8), (byte) (bindPort)
         };
+        write(STATUS_GRANTED);
         writeAddress(addrType, InetAddress.getByName(hostname).getAddress(), bindPortBytes);
 
         Socket socket = server.accept();
@@ -163,9 +162,8 @@ public class Socks5 {
     return null;
   }
 
-  private void writeAddress(byte addrType, byte[] address, byte[] port) throws IOException {
-    write((byte) 0); // RSV
-    write(addrType);
+  private void writeAddress(byte type, byte[] address, byte[] port) throws IOException {
+    writeArray((byte) 0, type); // RSV, type
     writeArray(address);
     writeArray(port);
   }
@@ -192,7 +190,7 @@ public class Socks5 {
     return string;
   }
 
-  void writeArray(byte[] bytes) throws IOException {
+  void writeArray(byte... bytes) throws IOException {
     output.write(bytes);
   }
 

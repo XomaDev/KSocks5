@@ -33,6 +33,7 @@ public class SimpleBind {
     if (
         input.read() != 0x05
             || input.read() != 0x00
+            || input.read() != 0x00
             || input.read() != 0x01
     ) {
       throw new IOException("Unable to connect");
