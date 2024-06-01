@@ -10,6 +10,21 @@
 
 Written in pure Java, no additional libraries, requires Java >= 8
 
+
+## Setup
+
+```xml
+<dependency>
+    <groupId>space.themelon</groupId>
+    <artifactId>KSocks5</artifactId>
+    <version>1.0</version>
+</dependency>
+```
+
+```kotlin
+implementation("space.themelon:KSocks5:1.0")
+```
+
 ## Usage
 
 - Spawn a simple open proxy server
