@@ -85,32 +85,28 @@ public class Socks5 {
     matchRSV();
     byte addrType = (byte) read();
 
-    byte[] rawAddress;
     InetAddress address = null;
 
     switch (addrType) {
       case ADDR_IPV4:
       case ADDR_IPV6: {
-        rawAddress = readArray(addrType == ADDR_IPV4 ? 4 : 16);
-        address = InetAddress.getByAddress(rawAddress);
+        byte[] bytes = readArray(addrType == ADDR_IPV4 ? 4 : 16);
+        address = InetAddress.getByAddress(bytes);
         break;
       }
       case ADDR_DOMAIN: {
         byte[] domain = readString();
         address = InetAddress.getByName(new String(domain));
-        rawAddress = new byte[1 + domain.length];
-        System.arraycopy(domain, 0, rawAddress, 1, domain.length);
         break;
       }
     }
-    byte[] portBytes = readArray(2);
 
     if (address == null) {
       writeReply(STATUS_ADDRESS_UNSUPPORTED, 0);
       return;
     }
 
-    int port = (portBytes[0] & 0xff) << 8 | portBytes[1] & 0xff;
+    int port = (read() & 0xff) << 8 | read() & 0xff;
 
     if (callback != null && !callback.newConnection(clientAddress, address, port)) {
       System.out.println("rejected");
