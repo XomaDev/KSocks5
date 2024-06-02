@@ -85,7 +85,7 @@ public class Socks5 {
     matchRSV();
     byte addrType = (byte) read();
 
-    byte[] rawAddress = null;
+    byte[] rawAddress;
     InetAddress address = null;
 
     switch (addrType) {
@@ -105,10 +105,8 @@ public class Socks5 {
     }
     byte[] portBytes = readArray(2);
 
-    write(SOCKS_VERSION);
     if (address == null) {
-      write(STATUS_ADDRESS_UNSUPPORTED);
-      writeAddress(addrType, rawAddress, portBytes);
+      writeReply(STATUS_ADDRESS_UNSUPPORTED, 0);
       return;
     }
 
@@ -116,18 +114,13 @@ public class Socks5 {
 
     if (callback != null && !callback.newConnection(clientAddress, address, port)) {
       System.out.println("rejected");
-      write(STATUS_NOT_ALLOWED);
-      writeAddress(addrType, rawAddress, portBytes);
+      writeReply(STATUS_NOT_ALLOWED, 0);
       return;
     }
 
     switch (command) {
       case CMD_STREAM: {
-        Socket socket = createSocket(address, port);
-        writeAddress(addrType, rawAddress, portBytes);
-        if (socket != null) {
-          new SocketRelay(client, socket);
-        }
+        streamTcp(address, port);
         break;
       }
       case CMD_BIND: {
@@ -137,11 +130,7 @@ public class Socks5 {
         ServerSocket server = new ServerSocket();
         server.bind(new InetSocketAddress(hostname, bindPort));
 
-        byte[] bindPortBytes = new byte[]{
-            (byte) (bindPort >> 8), (byte) (bindPort)
-        };
-        write(STATUS_GRANTED);
-        writeAddress(addrType, InetAddress.getByName(hostname).getAddress(), bindPortBytes);
+        writeReply(STATUS_GRANTED, bindPort);
 
         Socket socket = server.accept();
         server.close();
@@ -150,33 +139,44 @@ public class Socks5 {
         break;
       }
       default: {
-        write(STATUS_PROTOCOL_ERROR);
-        writeAddress(addrType, rawAddress, portBytes);
+        writeReply(STATUS_PROTOCOL_ERROR, 0);
       }
     }
   }
 
-  private Socket createSocket(InetAddress address, int port) throws IOException {
+  private void streamTcp(InetAddress address, int port) throws IOException {
+    Socket socket = null;
+    byte status;
     try {
-      Socket socket = new Socket(address, port);
-      write(STATUS_GRANTED);
-      return socket;
+      socket = new Socket(address, port);
+      status = STATUS_GRANTED;
     } catch (NoRouteToHostException e) {
-      write(STATUS_NETWORK_UNREACHABLE);
+      status = STATUS_NETWORK_UNREACHABLE;
     } catch (UnknownHostException e) {
-      write(STATUS_HOST_UNREACHABLE);
+      status = STATUS_HOST_UNREACHABLE;
     } catch (ConnectException e) {
-      write(STATUS_CONNECTION_REFUSED);
+      status = STATUS_CONNECTION_REFUSED;
     } catch (Exception e) {
-      write(STATUS_FAILURE);
+      status = STATUS_FAILURE;
     }
-    return null;
+    writeReply(status, socket == null ? 0 : socket.getLocalPort());
+    if (socket != null) {
+      new SocketRelay(client, socket);
+    }
   }
 
-  private void writeAddress(byte type, byte[] address, byte[] port) throws IOException {
-    writeArray((byte) 0, type); // RSV, type
-    writeArray(address);
-    writeArray(port);
+  private void writeReply(byte status, int port) throws IOException {
+    byte[] bytes = new byte[10];
+    bytes[0] = SOCKS_VERSION;
+    // bytes[1] = 0x00; RSV
+    bytes[2] = status;
+    bytes[3] = 0x01; // Ipv4 type
+    // bytes[4 - 7] = address bytes
+    bytes[8] = (byte) (port >> 8);
+    bytes[9] = (byte) port;
+
+    output.write(bytes);
+    output.flush();
   }
 
   private void matchVersion() throws IOException {
@@ -203,10 +203,6 @@ public class Socks5 {
 
   void writeArray(byte... bytes) throws IOException {
     output.write(bytes);
-  }
-
-  void write(byte b) throws IOException {
-    output.write(b);
   }
 
   private byte[] readArray(int len) throws IOException {
