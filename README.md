@@ -4,7 +4,7 @@
 ## Features
 
 - TCP Streaming, Bind
-- Username / Password Authentication
+- Username/Password Authentication
 - Intercept/Monitor incoming clients and connections
 - Reverse Proxy
 
@@ -17,12 +17,12 @@ Written in pure Java, no additional libraries, requires Java >= 8
 <dependency>
     <groupId>space.themelon</groupId>
     <artifactId>KSocks5</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
 </dependency>
 ```
 
 ```kotlin
-implementation("space.themelon:KSocks5:1.0")
+implementation("space.themelon:KSocks5:1.1")
 ```
 
 ## Usage

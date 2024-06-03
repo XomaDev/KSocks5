@@ -6,7 +6,7 @@
 
     <groupId>space.themelon</groupId>
     <artifactId>KSocks5</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Standard Socks5 server implementation in pure Java </description>
@@ -84,7 +84,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.9.1</version>
+                <version>3.7.0</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
